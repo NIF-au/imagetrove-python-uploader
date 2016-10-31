@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 #
-# upload DICOM data to ImageTrove/mytardis
+# upload DICOM directory to ImageTrove/mytardis
 #
 #
 # Andrew Janke - a.janke@gmail.com
@@ -224,21 +224,27 @@ if __name__ == "__main__":
     # history += '>>>> ' + " ".join(str(x) for x in sys.argv)
 
     # set up and parse command line arguments
-    parser = argparse.ArgumentParser(description = "convert a DICOM directory " +
-                        "to MINC/NIFTI/PNG and upload to imagetrove")
+    parser = argparse.ArgumentParser(description = "Convert a DICOM directory " +
+        "to MINC/NIFTI/PNG and upload to imagetrove." +
+        "\n\n" +
+        "Configuration of the server to upload to and mappings are stored in " +
+        "the config file specified by --config")
     parser.add_argument('-v', '--verbose', help="be verbose",
-                        action="store_true", default=False)
+        action="store_true", default=False)
     parser.add_argument('--debug', help="be very verbose",
-                        action="store_true", default=False)
-    parser.add_argument('-c', '--clobber', help="clobber existing files",
-                        action="store_true", default=False)
+        action="store_true", default=False)
+    parser.add_argument('-c', '--config', help="file to read config from",
+        default="./imgtr-uploader-dicom.cfg")
     parser.add_argument('-f', '--fake', help="do a dry run (echo cmds only)",
-                        action="store_true", default=False)
+        action="store_true", default=False)
     parser.add_argument('-z', '--compress', help="compress .tar.bz2 input dir when done",
-                        action="store_true", default=False)
+        action="store_true", default=False)
     parser.add_argument("indir", help="the input DICOM directory")
     args = parser.parse_args()
 
+    # remove possible trailing slash that will break
+    # everything later with dirname/basename
+    args.indir = os.path.normpath(args.indir)
     print(" + indir: " + args.indir)
 
     # TODO eventually handled by external config
@@ -262,7 +268,7 @@ if __name__ == "__main__":
 
     # import config
     cfg = configparser.ConfigParser()
-    cfg.read("./imgtr-uploader-dicom.cfg")
+    cfg.read(args.config)
 
     # sort input directory via dcmsort
     do_cmd(['dcmsort', '--by_id', '--outdir', dcmdir, '--copy', args.indir], False)
@@ -319,7 +325,7 @@ if __name__ == "__main__":
         # Determine the DatasetID
         # typically this is the DICOM.PatientID (0010,0020)
         if cfg[instrument]['DatasetID'] in firstDCM:
-            dataset_description = str(getattr(firstDCM, cfg[instrument]['DatasetID']))
+            dataset_title = str(getattr(firstDCM, cfg[instrument]['DatasetID']))
 
         # Determine InstitutionName
         # typically DICOM.InstitutionName (0008,0080)
@@ -335,7 +341,7 @@ if __name__ == "__main__":
             print("experimentID: " + experimentID)
 
         # check (create and) get the datasetID
-        datasetID = str(get_datasetID(cfg, dataset_description, experimentID, instrumentID))
+        datasetID = str(get_datasetID(cfg, dataset_title, experimentID, instrumentID))
         if args.verbose:
             print("datasetID: " + str(datasetID))
 
@@ -374,7 +380,7 @@ if __name__ == "__main__":
                 SeriesNumber = 0
 
             print(" + [" + experiment_title + ' : ' +
-                dataset_description + ' : ' +
+                dataset_title + ' : ' +
                 instrument + ' : ' +
                 str(SeriesNumber) + ' : ' +
                 StudyDescription + ' : ' +
@@ -386,7 +392,7 @@ if __name__ == "__main__":
                 '-nb',   # no backup files
                 '-imt',  # ignore missing tags
                 '-gin',  # generate new SOP Instance UID
-                '-ma', "(0010,0010)=" + dataset_description,
+                '-ma', "(0010,0010)=" + dataset_title,
                 "-ea", "(0010,0030)",    # Patient birth date
                 "-ea", "(0008,0050)",    # Accession number
                 "-ea", "(0020,000D)",    # Study Instance UID
@@ -450,6 +456,13 @@ if __name__ == "__main__":
                 upload_datafile(cfg, niifile, datasetID, 'imagetrove_hfs')
                 upload_datafile(cfg, pngfile, datasetID, 'imagetrove_disk')
 
-        print("Finished with experiment ", experimentID,
-            " uploaded files to dataset ", datasetID,
-            " Dataset ", dataset_description)
+        print("  + Finished with experiment " + experiment_title + " (" + experimentID + ")" +
+            " uploaded files to dataset " + dataset_title + "(" + datasetID + ")")
+
+
+    # compress indir
+    zipfile = os.path.basename(args.indir) + '-' + experiment_title + "-" + dataset_title + ".zip"
+    print("  + zipfile: " + zipfile)
+    os.chdir(os.path.dirname(args.indir))
+    do_cmd(['zip', '--move', '--test', '--recurse-paths', zipfile,
+        os.path.basename(args.indir)], True)
