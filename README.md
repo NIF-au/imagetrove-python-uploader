@@ -24,10 +24,10 @@ Use the following syntax:
 *Remove spaces from `ManacturerName-StationName`. Examples found in imagetrove.ini.example
 
 #### [MyTardis Instrument Name]
-`experiment-tag =`  DICOM tag used as Experiment name  
-`dataset-tag = `  DICOM tag used as Dataset name  
-`facility-name = ` MyTardis Facility  
-`storagebox =` MyTardis Storagebox  
+`experiment-tag` =  DICOM tag used as Experiment name  
+`dataset-tag` = DICOM tag used as Dataset name  
+`facility-name` = MyTardis Facility  
+`storagebox` = MyTardis Storagebox  
 
 
 
