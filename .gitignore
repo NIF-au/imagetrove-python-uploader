@@ -1,0 +1,12 @@
+*.ini
+__pycache__
+*.pyc
+.idea/
+*.cfg
+*.config
+Python36/
+python
+.pytest_cache/
+.vscode/
+*.code-workspace
+test/testdir/

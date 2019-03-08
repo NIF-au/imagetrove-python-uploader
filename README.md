@@ -7,3 +7,39 @@ Auto-upload from instrument to an AAF authenticated ImageTrove/MyTardis resposit
 
 ## Usage
 This python listener client will connect to a single instance of Imagetrove/MyTardis but can back-end on multiple DICOM instruments (typically MRI/CT/PET).
+
+## Pre-requisites
+Linux, Windows, Mac  
+Miniconda Recommended  
+`pip install -r requirements.txt`
+
+## Config file
+Default config file location is `HOME_DIR/imagetrove/imagetrove.ini`
+
+#### [Instrument Mapping]
+
+Use the following syntax:  
+`ManufacturerName-StationName = MyTardis Instrument Name`  
+
+*Remove spaces from `ManacturerName-StationName`. Examples found in imagetrove.ini.example
+
+#### [MyTardis Instrument Name]
+`experiment-tag =`  DICOM tag used as Experiment name  
+`dataset-tag = `  DICOM tag used as Dataset name  
+`facility-name = ` MyTardis Facility  
+`storagebox =` MyTardis Storagebox  
+
+
+
+## Running
+`python run.py dicom {input-directory}`
+
+### Optionals
+| Option        | Description                      | Default value |
+| ------------- |:--------------------------------:|--------------:|
+| `--config `   | Config file path                 | `~/imagetrove/imagetrove.ini` |
+| `--tmproot`   | Temp dir                         | Default OS tmp directory |
+| `--cores`     | No. of cores for multiprocessing | All system cores |
+| `--experiment`| Manual Experiment name override  | From metadata, see experiment-tag in config |
+| `--dataset`   | Manual Dataset name override     | From metadata, see dataset-tag in config |
+

@@ -1,0 +1,21 @@
+# ImageTrove test configuration file
+
+[Server]
+User = MyTardisSuperuser
+ApiKey = MyTardisSuperuser_apikey
+Url = https://mytardis.com
+Institution = My Institution
+
+[Client]
+tmproot = ~\imagetrove\tmp
+cores = 8
+
+[Instrument Mapping]
+SIEMENS-TrioTim = 3T Magnetom Prisma
+SIEMENS-mrcTrio = 3T Magnetom Prisma
+
+[3T Magnetom Prisma]
+experiment-tag = ReferringPhysicianName
+dataset-tag = PatientID
+facility-name = 3T Facility
+storagebox = default
