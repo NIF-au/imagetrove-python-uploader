@@ -7,7 +7,7 @@ import json
 import logging
 import urllib
 import urllib.parse
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import urlencode
 logger = logging.getLogger(__name__)
 
 
@@ -48,6 +48,7 @@ class TardisServer:
             cmd = f'curl --header \"Authorization: ApiKey {self.user}:{self.apikey}\" --header \"Content-Type: application/json\" --data \'{data}\' --request POST \"{url}\"'
             _, stdout, stderr = ssh.exec_command(cmd)
             response = stdout.read()
+            logging.info(response)
         else:
             if files is not None:
                 file_obj = open(files, 'rb')

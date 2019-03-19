@@ -9,16 +9,13 @@ from imgtr.tardis import Group
 from imgtr.tardis import StorageBox
 from imgtr.staging import upload_file
 from imgtr.utils import safe_name
-import multiprocessing as mp
 import pathlib
 import logging
 import pydicom
 from imgtr.utils import zipdir
 import datetime
-from functools import partial
 import json
 import os
-import sys
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +23,25 @@ logger = logging.getLogger(__name__)
 def run(job):
     # Scanning all dicoms for all series
     logging.info('Scanning all dicoms for all series')
-    pools = mp.Pool(processes=job.cores)
+    # pools = mp.Pool(processes=job.cores)
     # Compiling list of dicoms and json metadata
-    dicom_json_tuples = dir_scan(pools, indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset)
+    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset)
 
     # Making series output dir
     series_json_tuples = make_series_dirs(dicom_json_tuples, outdir=job.tmpdir)
 
     # Sorting dicom
     logging.info('Sorting dicoms into series dirs ...')
-    pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
+    [sorter(*x, job.tmpdir) for x in dicom_json_tuples]
+    # for dicom_json_tuple in dicom_json_tuples:
+    #     sorter(*dicom_json_tuple, job.tmpdir)
+    # pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
 
     logging.info('Zipping dicoms into series zips ...')
-    pools.map(zipdir, [x[0] for x in series_json_tuples])
+    # for x in [x[0] for x in series_json_tuples]:
+    #     zipdir(x)
+    [zipdir(x) for x in [x[0] for x in series_json_tuples]]
+    # pools.map(zipdir, [x[0] for x in series_json_tuples])
 
     job.staging.open()
     push_series(
@@ -50,10 +53,11 @@ def run(job):
     job.staging.close()
 
 
-def dir_scan(pools, indir, cfg, experiment, dataset):
+def dir_scan(indir, cfg, experiment, dataset):
     infiles = indir.glob('**/*')
     scan_generator = ((x, cfg, experiment, dataset) for x in infiles)
-    scan_results = pools.starmap(scanner, scan_generator)
+    scan_results = [scanner(*x) for x in scan_generator]
+    # scan_results = pools.starmap(scanner, scan_generator)
     return scan_results
 
 
@@ -216,7 +220,6 @@ def push_series(series_json_tuples, server, cfg, ssh):
 
         serieszip = pathlib.Path(os.path.join(os.path.dirname(seriesdir), '{}.zip'.format(os.path.basename(seriesdir)))).resolve(strict=True)
         series_json = json.loads(series_json_string)
-        old_series_json = series_json
         dicomdir = pathlib.Path(f'{seriesdir}/DICOM')
         dicom = next((dicomdir).glob('*.dcm'))
         try:

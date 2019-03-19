@@ -30,7 +30,7 @@ class Job:
         self.config = pathlib.Path(config).resolve(strict=True)
 
         self.tmproot = self.DEFAULT_TMPROOT
-        self.cores = self.DEFAULT_CORES
+        # self.cores = self.DEFAULT_CORES
         self.cfg = self.parse_config()
         self.tmpdir = None
         self.tmphandle = None
@@ -47,19 +47,19 @@ class Job:
     def __str__(self):
         return self.name
 
-    @property
-    def cores(self):
-        return self._cores
-
-    @cores.setter
-    def cores(self, cores):
-        cores = int(cores)
-        maxcores = multiprocessing.cpu_count()
-        if cores > maxcores:
-            cores = maxcores
-        elif cores < 1:
-            cores = 1
-        self._cores = cores
+    # @property
+    # def cores(self):
+    #     return self._cores
+    #
+    # @cores.setter
+    # def cores(self, cores):
+    #     cores = int(cores)
+    #     maxcores = multiprocessing.cpu_count()
+    #     if cores > maxcores:
+    #         cores = maxcores
+    #     elif cores < 1:
+    #         cores = 1
+    #     self._cores = cores
 
     def server_from_cfg(self):
         url = self.cfg.get('Server', 'Url')
@@ -68,17 +68,18 @@ class Job:
         institution = self.cfg.get('Server', 'Institution')
         curl = False
         if self.cfg.has_section('Staging'):
-            if self.cfg.has_option('Staging', 'Curl'):
-                curl = self.cfg.get('Staging', 'Curl')
+            if self.cfg.has_option('Staging', 'curl'):
+                curl = eval(self.cfg.get('Staging', 'curl'))
+                pass
         self.server = TardisServer(url=url, user=user, apikey=apikey, institution=institution, curl=curl)
         logging.info('Tardis server at %s' % self.server.url)
 
     def staging_from_cfg(self):
         if self.cfg.has_section('Staging'):
-            user = self.cfg.get('Staging', 'User')
-            host = self.cfg.get('Staging', 'Host')
-            port = self.cfg.get('Staging', 'Port')
-            key = self.cfg.get('Staging', 'Key')
+            user = self.cfg.get('Staging', 'user')
+            host = self.cfg.get('Staging', 'host')
+            port = self.cfg.get('Staging', 'port')
+            key = self.cfg.get('Staging', 'key')
             self.staging = Staging(user=user, host=host, port=port, key=key)
             logging.info('Staging at %s' % self.staging.host)
         else:
@@ -91,14 +92,14 @@ class Job:
         if self.cfg.has_option('Client', 'tmproot'):
             self.tmproot = self.cfg.get('Client', 'tmproot')
             self.tmproot = pathlib.Path(self.tmproot).resolve(strict=True)
-        if self.cfg.has_option('Client', 'cores'):
-            self.cores = self.cfg.get('Client', 'cores')
+        # if self.cfg.has_option('Client', 'cores'):
+        #     self.cores = self.cfg.get('Client', 'cores')
 
     def args_optionals(self, args):
         if args.tmproot:
             self.tmproot = pathlib.Path(args.tmproot).resolve(strict=True)
-        if args.cores:
-            self.cores = args.cores
+        # if args.cores:
+        #     self.cores = args.cores
         if args.experiment:
             self.experiment = args.experiment
         if args.dataset:

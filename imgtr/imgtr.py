@@ -19,7 +19,7 @@ def get_args(args=sys.argv[1:]):
     # Optional arguments
     parser.add_argument('--config', help='Config file')
     parser.add_argument('--tmproot', help='Root dir to create tmpdir')
-    parser.add_argument('--cores', help='number of cpu cores')
+    # parser.add_argument('--cores', help='number of cpu cores')
     parser.add_argument('--experiment', help='experiment name override')
     parser.add_argument('--dataset', help='dataset name override')
     args = parser.parse_args(args)
@@ -43,7 +43,7 @@ def main(args=sys.argv[1:]):
 
     logging.info('Input data dir at %s' % job.indir)
     logging.info('Config file at %s' % job.config)
-    logging.info('%s cores for multiprocessing' % job.cores)
+    # logging.info('%s cores for multiprocessing' % job.cores)
 
     job.server_from_cfg()
     job.staging_from_cfg()
