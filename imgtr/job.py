@@ -86,7 +86,7 @@ class Job:
             self.staging = Staging()
 
     def make_tmpdir(self):
-        self.tmpdir, self.tmphandle = create_tmpdir(self.tmproot, self.name)
+        self.tmpdir, self.tmphandle = create_tmpdir(self.tmproot)
 
     def config_optionals(self):
         if self.cfg.has_option('Client', 'tmproot'):

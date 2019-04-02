@@ -47,7 +47,7 @@ def create_tmpdir(tmproot=tempfile.gettempdir(), prefix=None):
     """
     tmproot = pathlib.Path(tmproot).resolve()
     tmproot.mkdir(parents=True, exist_ok=True)
-    tmphandle = tempfile.TemporaryDirectory(dir=tmproot, prefix=prefix+'_')
+    tmphandle = tempfile.TemporaryDirectory(dir=tmproot)
     tmpdir = pathlib.Path(tmphandle.name).resolve()
     logging.debug('Temporary directory created at %s' % tmpdir)
     return tmpdir, tmphandle
