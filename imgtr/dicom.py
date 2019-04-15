@@ -35,10 +35,10 @@ def run(job):
     # Sorting dicom
     logging.info('Sorting dicoms into series dirs ...')
     if job.cores > 1:
-        for dicom_json_tuple in dicom_json_tuples:
-            sorter(*dicom_json_tuple, job.tmpdir)
         pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
     else:
+        # for dicom_json_tuple in dicom_json_tuples:
+        #     sorter(*dicom_json_tuple, job.tmpdir)
         [sorter(*x, job.tmpdir) for x in dicom_json_tuples]
 
     logging.info('Zipping dicoms into series zips ...')
