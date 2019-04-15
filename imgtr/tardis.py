@@ -116,7 +116,7 @@ class Instrument(TardisObject):
 
 
 class Experiment(TardisObject):
-    def __init__(self, server, name, handle=None):
+    def __init__(self, server, name, handle=""):
         TardisObject.__init__(self, server, name)
         self.model_name = 'experiment'
         self.handle = handle

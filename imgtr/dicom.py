@@ -9,6 +9,8 @@ from imgtr.tardis import Group
 from imgtr.tardis import StorageBox
 from imgtr.staging import upload_file
 from imgtr.utils import safe_name
+import multiprocessing as mp
+from functools import partial
 import pathlib
 import logging
 import pydicom
@@ -23,25 +25,27 @@ logger = logging.getLogger(__name__)
 def run(job):
     # Scanning all dicoms for all series
     logging.info('Scanning all dicoms for all series')
-    # pools = mp.Pool(processes=job.cores)
+    pools = mp.Pool(processes=job.cores)
     # Compiling list of dicoms and json metadata
-    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset)
+    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset, cores=job.cores)
 
     # Making series output dir
     series_json_tuples = make_series_dirs(dicom_json_tuples, outdir=job.tmpdir)
 
     # Sorting dicom
     logging.info('Sorting dicoms into series dirs ...')
-    [sorter(*x, job.tmpdir) for x in dicom_json_tuples]
-    # for dicom_json_tuple in dicom_json_tuples:
-    #     sorter(*dicom_json_tuple, job.tmpdir)
-    # pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
+    if job.cores > 1:
+        for dicom_json_tuple in dicom_json_tuples:
+            sorter(*dicom_json_tuple, job.tmpdir)
+        pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
+    else:
+        [sorter(*x, job.tmpdir) for x in dicom_json_tuples]
 
     logging.info('Zipping dicoms into series zips ...')
-    # for x in [x[0] for x in series_json_tuples]:
-    #     zipdir(x)
-    [zipdir(x) for x in [x[0] for x in series_json_tuples]]
-    # pools.map(zipdir, [x[0] for x in series_json_tuples])
+    if job.cores > 1:
+        pools.map(zipdir, [x[0] for x in series_json_tuples])
+    else:
+        [zipdir(x) for x in [x[0] for x in series_json_tuples]]
 
     job.staging.open()
     push_series(
@@ -53,11 +57,14 @@ def run(job):
     job.staging.close()
 
 
-def dir_scan(indir, cfg, experiment, dataset):
+def dir_scan(indir, cfg, experiment, dataset, cores):
+    pools = mp.Pool(processes=cores)
     infiles = indir.glob('**/*')
     scan_generator = ((x, cfg, experiment, dataset) for x in infiles)
-    scan_results = [scanner(*x) for x in scan_generator]
-    # scan_results = pools.starmap(scanner, scan_generator)
+    if cores > 1:
+        scan_results = pools.starmap(scanner, scan_generator)
+    else:
+        scan_results = [scanner(*x) for x in scan_generator]
     return scan_results
 
 

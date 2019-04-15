@@ -18,7 +18,7 @@ class Job:
     # Default root path where tmpdir will be created
     DEFAULT_TMPROOT = pathlib.Path(tempfile.gettempdir())
     # Default number of cores
-    DEFAULT_CORES = multiprocessing.cpu_count()
+    DEFAULT_CORES = 1
 
     def __init__(self, indir, config=None):
         # Essential parameters
@@ -30,7 +30,7 @@ class Job:
         self.config = pathlib.Path(config).resolve(strict=True)
 
         self.tmproot = self.DEFAULT_TMPROOT
-        # self.cores = self.DEFAULT_CORES
+        self.cores = self.DEFAULT_CORES
         self.cfg = self.parse_config()
         self.tmpdir = None
         self.tmphandle = None
@@ -47,19 +47,19 @@ class Job:
     def __str__(self):
         return self.name
 
-    # @property
-    # def cores(self):
-    #     return self._cores
-    #
-    # @cores.setter
-    # def cores(self, cores):
-    #     cores = int(cores)
-    #     maxcores = multiprocessing.cpu_count()
-    #     if cores > maxcores:
-    #         cores = maxcores
-    #     elif cores < 1:
-    #         cores = 1
-    #     self._cores = cores
+    @property
+    def cores(self):
+        return self._cores
+
+    @cores.setter
+    def cores(self, cores):
+        cores = int(cores)
+        maxcores = multiprocessing.cpu_count()
+        if cores > maxcores:
+            cores = maxcores
+        elif cores < 1:
+            cores = 1
+        self._cores = cores
 
     def server_from_cfg(self):
         url = self.cfg.get('Server', 'Url')
@@ -92,14 +92,14 @@ class Job:
         if self.cfg.has_option('Client', 'tmproot'):
             self.tmproot = self.cfg.get('Client', 'tmproot')
             self.tmproot = pathlib.Path(self.tmproot).resolve(strict=True)
-        # if self.cfg.has_option('Client', 'cores'):
-        #     self.cores = self.cfg.get('Client', 'cores')
+        if self.cfg.has_option('Client', 'cores'):
+            self.cores = self.cfg.get('Client', 'cores')
 
     def args_optionals(self, args):
         if args.tmproot:
             self.tmproot = pathlib.Path(args.tmproot).resolve(strict=True)
-        # if args.cores:
-        #     self.cores = args.cores
+        if args.cores:
+            self.cores = args.cores
         if args.experiment:
             self.experiment = args.experiment
         if args.dataset:
