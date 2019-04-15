@@ -222,6 +222,7 @@ class Datafile(TardisObject):
         self.dataset = dataset
         self.study = study
         self.storagebox = storagebox
+        self.directory = None
         self.md5sum = None
         self.sha512sum = None
         self.verified = None
@@ -266,6 +267,7 @@ class Datafile(TardisObject):
             self.sha512sum = results[-1]['sha512sum']
             self.verified = results[-1]['replicas'][0]['verified']
             self.size = results[-1]['size']
+            self.directory = results[-1]['directory']
         elif create:
             self.new_json = {
                 "dataset": f"/api/v1/dataset/{self.dataset.id}/",
