@@ -95,7 +95,7 @@ def scanner(infile, cfg, experiment, dataset):
             raise ValueError
 
         try:
-            instrument = cfg['Instrument Mapping'][station]
+            instrument = safe_name(cfg['Instrument Mapping'][station])
         except KeyError:
             logging.error(f'{station} not found in config [Instrument Mapping]')
             raise
@@ -104,7 +104,7 @@ def scanner(infile, cfg, experiment, dataset):
             raise ValueError
 
         if cfg.has_option(instrument, 'facility-name'):
-            facility = cfg[instrument]['facility-name']
+            facility = safe_name(cfg[instrument]['facility-name'])
             if not facility:
                 logging.error(f'Facility name not found in config [{instrument}]')
                 raise ValueError
