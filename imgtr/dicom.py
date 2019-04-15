@@ -75,8 +75,7 @@ def make_series_dirs(scan_results, outdir):
     for series_json_string in series_json_strings:
         series_json = json.loads(series_json_string)
         seriesdir = outdir/series_json['facility']/series_json['experiment']/series_json['dataset']/series_json['study']/series_json['series']
-        dicomdir = seriesdir/'DICOM'
-        dicomdir.mkdir(parents=True, exist_ok=True)
+        seriesdir.mkdir(parents=True, exist_ok=True)
         series_json_tuples.append((str(seriesdir), series_json_string))
     return series_json_tuples
 
@@ -176,7 +175,7 @@ def scanner(infile, cfg, experiment, dataset):
 
 def sorter(infile, series_json_string, outdir):
     series_json = json.loads(series_json_string)
-    outdir = outdir/series_json['facility']/series_json['experiment']/series_json['dataset']/series_json['study']/series_json['series']/'DICOM'
+    outdir = outdir/series_json['facility']/series_json['experiment']/series_json['dataset']/series_json['study']/series_json['series']
     ERASE_TAG_LIST = [
             0x00080050,
             0x00204000,
@@ -227,8 +226,7 @@ def push_series(series_json_tuples, server, cfg, ssh):
 
         serieszip = pathlib.Path(os.path.join(os.path.dirname(seriesdir), '{}.zip'.format(os.path.basename(seriesdir)))).resolve(strict=True)
         series_json = json.loads(series_json_string)
-        dicomdir = pathlib.Path(f'{seriesdir}/DICOM')
-        dicom = next((dicomdir).glob('*.dcm'))
+        dicom = next((pathlib.Path(seriesdir)).glob('*.dcm'))
         try:
             dcm = pydicom.dcmread(str(dicom), stop_before_pixels=True)
             timestring = f'{dcm.SeriesDate} {dcm.SeriesTime}'
