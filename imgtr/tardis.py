@@ -209,6 +209,21 @@ class ObjectACL(TardisObject):
             "effectiveDate": None,
             "expiryDate": None}
 
+    def fetch(self, create=False, ssh=None):
+        query_string = urlencode(self.query)
+        results = self.server.get(f'/api/v1/{self.model_name}/?format=json&{query_string}', ssh)
+        for result in results:
+            if result['content_object'] == f"/api/v1/experiment/{self.experiment.id}/":
+                break
+            else:
+                result = None
+
+        if result:
+            self.id = result['id']
+        elif create:
+            self.server.post(f'/api/v1/{self.model_name}/?format=json', json.dumps(self.new_json), ssh)
+            self.fetch(False, ssh)
+
     def __str__(self):
         return None
 
