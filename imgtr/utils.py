@@ -34,7 +34,7 @@ def safe_name(name):
     :param name:
     :return:
     """
-    name = re.sub(r'[ =?<>:^/"|*\\ ]', '_', str(name))
+    name = re.sub(r'[ =?()<>:^/"|*\\ ]', '_', str(name))
     return name
 
 
