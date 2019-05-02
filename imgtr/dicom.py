@@ -226,8 +226,11 @@ def push_series(series_json_tuples, server, cfg, ssh):
             dcm = pydicom.dcmread(str(dicom), stop_before_pixels=True)
             timestring = f'{dcm.SeriesDate} {dcm.SeriesTime}'
             seriestime = datetime.datetime.strptime(timestring, "%Y%m%d %H%M%S.%f").replace(microsecond=0).isoformat()
+            timestring = f'{dcm.StudyDate} {dcm.StudyTime}'
+            studytime = datetime.datetime.strptime(timestring, "%Y%m%d %H%M%S.%f").replace(microsecond=0).isoformat()
         except Exception:
             seriestime = datetime.datetime.fromtimestamp(int(dicom.stat().st_ctime)).replace(microsecond=0).isoformat()
+            studytime = datetime.datetime.fromtimestamp(int(dicom.stat().st_ctime)).replace(microsecond=0).isoformat()
 
         if i > 0 and old_series_json['instrument'] == series_json['instrument'] and \
             old_series_json['facility'] == series_json['facility'] and \
@@ -257,6 +260,6 @@ def push_series(series_json_tuples, server, cfg, ssh):
             manageracl = ObjectACL(server, manager, experiment)
             manageracl.fetch(create=True, ssh=ssh)
 
-        datafile = Datafile(server, serieszip, storagebox, dataset, series_json['study'], seriestime)
+        datafile = Datafile(server, serieszip, storagebox, dataset, series_json['study'], seriestime, studytime)
         upload_file(datafile, ssh)
         old_series_json = series_json

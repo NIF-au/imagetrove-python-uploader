@@ -53,7 +53,7 @@ def upload_file(datafile, ssh):
                 logging.error('Too many non-identical files with same name')
                 raise Exception
             else:
-                time_tag = datafile.acqtime.replace(':', '').replace('-', '')
+                time_tag = datafile.studytime.replace(':', '').replace('-', '')
                 newname = f'{datafile.file.stem}_{time_tag}{datafile.file.suffix}'
                 if newname == datafile.name:
                     datafile.name = f'{datafile.name}0'

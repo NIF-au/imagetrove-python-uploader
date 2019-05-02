@@ -214,7 +214,7 @@ class ObjectACL(TardisObject):
 
 
 class Datafile(TardisObject):
-    def __init__(self, server, file, storagebox, dataset, study, acqtime):
+    def __init__(self, server, file, storagebox, dataset, study, acqtime, studytime):
         self.file = file
         self.name = file.name
         TardisObject.__init__(self, server, file.name)
@@ -228,6 +228,7 @@ class Datafile(TardisObject):
         self.size = None
         self.count = 1
         self.acqtime = acqtime
+        self.studytime = studytime
         self.query = {
             'dataset__id': self.dataset.id,
             'filename': urllib.parse.quote(self.name)
