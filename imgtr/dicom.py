@@ -9,6 +9,8 @@ from imgtr.tardis import Group
 from imgtr.tardis import StorageBox
 from imgtr.staging import upload_file
 from imgtr.utils import safe_name
+import multiprocessing as mp
+from functools import partial
 import pathlib
 import logging
 import pydicom
@@ -23,25 +25,27 @@ logger = logging.getLogger(__name__)
 def run(job):
     # Scanning all dicoms for all series
     logging.info('Scanning all dicoms for all series')
-    # pools = mp.Pool(processes=job.cores)
+    pools = mp.Pool(processes=job.cores)
     # Compiling list of dicoms and json metadata
-    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset)
+    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset, cores=job.cores)
 
     # Making series output dir
     series_json_tuples = make_series_dirs(dicom_json_tuples, outdir=job.tmpdir)
 
     # Sorting dicom
     logging.info('Sorting dicoms into series dirs ...')
-    [sorter(*x, job.tmpdir) for x in dicom_json_tuples]
-    # for dicom_json_tuple in dicom_json_tuples:
-    #     sorter(*dicom_json_tuple, job.tmpdir)
-    # pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
+    if job.cores > 1:
+        pools.starmap(partial(sorter, outdir=job.tmpdir), dicom_json_tuples)
+    else:
+        # for dicom_json_tuple in dicom_json_tuples:
+        #     sorter(*dicom_json_tuple, job.tmpdir)
+        [sorter(*x, job.tmpdir) for x in dicom_json_tuples]
 
     logging.info('Zipping dicoms into series zips ...')
-    # for x in [x[0] for x in series_json_tuples]:
-    #     zipdir(x)
-    [zipdir(x) for x in [x[0] for x in series_json_tuples]]
-    # pools.map(zipdir, [x[0] for x in series_json_tuples])
+    if job.cores > 1:
+        pools.map(zipdir, [x[0] for x in series_json_tuples])
+    else:
+        [zipdir(x) for x in [x[0] for x in series_json_tuples]]
 
     job.staging.open()
     push_series(
@@ -53,11 +57,14 @@ def run(job):
     job.staging.close()
 
 
-def dir_scan(indir, cfg, experiment, dataset):
+def dir_scan(indir, cfg, experiment, dataset, cores):
+    pools = mp.Pool(processes=cores)
     infiles = indir.glob('**/*')
     scan_generator = ((x, cfg, experiment, dataset) for x in infiles)
-    scan_results = [scanner(*x) for x in scan_generator]
-    # scan_results = pools.starmap(scanner, scan_generator)
+    if cores > 1:
+        scan_results = pools.starmap(scanner, scan_generator)
+    else:
+        scan_results = [scanner(*x) for x in scan_generator]
     return scan_results
 
 
@@ -68,8 +75,7 @@ def make_series_dirs(scan_results, outdir):
     for series_json_string in series_json_strings:
         series_json = json.loads(series_json_string)
         seriesdir = outdir/series_json['facility']/series_json['experiment']/series_json['dataset']/series_json['study']/series_json['series']
-        dicomdir = seriesdir/'DICOM'
-        dicomdir.mkdir(parents=True, exist_ok=True)
+        seriesdir.mkdir(parents=True, exist_ok=True)
         series_json_tuples.append((str(seriesdir), series_json_string))
     return series_json_tuples
 
@@ -89,7 +95,7 @@ def scanner(infile, cfg, experiment, dataset):
             raise ValueError
 
         try:
-            instrument = cfg['Instrument Mapping'][station]
+            instrument = safe_name(cfg['Instrument Mapping'][station])
         except KeyError:
             logging.error(f'{station} not found in config [Instrument Mapping]')
             raise
@@ -98,7 +104,7 @@ def scanner(infile, cfg, experiment, dataset):
             raise ValueError
 
         if cfg.has_option(instrument, 'facility-name'):
-            facility = cfg[instrument]['facility-name']
+            facility = safe_name(cfg[instrument]['facility-name'])
             if not facility:
                 logging.error(f'Facility name not found in config [{instrument}]')
                 raise ValueError
@@ -169,7 +175,7 @@ def scanner(infile, cfg, experiment, dataset):
 
 def sorter(infile, series_json_string, outdir):
     series_json = json.loads(series_json_string)
-    outdir = outdir/series_json['facility']/series_json['experiment']/series_json['dataset']/series_json['study']/series_json['series']/'DICOM'
+    outdir = outdir/series_json['facility']/series_json['experiment']/series_json['dataset']/series_json['study']/series_json['series']
     ERASE_TAG_LIST = [
             0x00080050,
             0x00204000,
@@ -220,8 +226,7 @@ def push_series(series_json_tuples, server, cfg, ssh):
 
         serieszip = pathlib.Path(os.path.join(os.path.dirname(seriesdir), '{}.zip'.format(os.path.basename(seriesdir)))).resolve(strict=True)
         series_json = json.loads(series_json_string)
-        dicomdir = pathlib.Path(f'{seriesdir}/DICOM')
-        dicom = next((dicomdir).glob('*.dcm'))
+        dicom = next((pathlib.Path(seriesdir)).glob('*.dcm'))
         try:
             dcm = pydicom.dcmread(str(dicom), stop_before_pixels=True)
             timestring = f'{dcm.SeriesDate} {dcm.SeriesTime}'

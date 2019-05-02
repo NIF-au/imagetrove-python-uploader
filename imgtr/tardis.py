@@ -116,7 +116,7 @@ class Instrument(TardisObject):
 
 
 class Experiment(TardisObject):
-    def __init__(self, server, name, handle=None):
+    def __init__(self, server, name, handle=""):
         TardisObject.__init__(self, server, name)
         self.model_name = 'experiment'
         self.handle = handle
@@ -209,6 +209,21 @@ class ObjectACL(TardisObject):
             "effectiveDate": None,
             "expiryDate": None}
 
+    def fetch(self, create=False, ssh=None):
+        query_string = urlencode(self.query)
+        results = self.server.get(f'/api/v1/{self.model_name}/?format=json&{query_string}', ssh)
+        for result in results:
+            if result['content_object'] == f"/api/v1/experiment/{self.experiment.id}/":
+                break
+            else:
+                result = None
+
+        if result:
+            self.id = result['id']
+        elif create:
+            self.server.post(f'/api/v1/{self.model_name}/?format=json', json.dumps(self.new_json), ssh)
+            self.fetch(False, ssh)
+
     def __str__(self):
         return None
 
@@ -222,6 +237,7 @@ class Datafile(TardisObject):
         self.dataset = dataset
         self.study = study
         self.storagebox = storagebox
+        self.directory = None
         self.md5sum = None
         self.sha512sum = None
         self.verified = None
@@ -267,6 +283,7 @@ class Datafile(TardisObject):
             self.sha512sum = results[-1]['sha512sum']
             self.verified = results[-1]['replicas'][0]['verified']
             self.size = results[-1]['size']
+            self.directory = results[-1]['directory']
         elif create:
             self.new_json = {
                 "dataset": f"/api/v1/dataset/{self.dataset.id}/",
