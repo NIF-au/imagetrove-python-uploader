@@ -212,11 +212,11 @@ class ObjectACL(TardisObject):
     def fetch(self, create=False, ssh=None):
         query_string = urlencode(self.query)
         results = self.server.get(f'/api/v1/{self.model_name}/?format=json&{query_string}', ssh)
-        for result in results:
-            if result['content_object'] == f"/api/v1/experiment/{self.experiment.id}/":
+        result = None
+        for iresult in results:
+            if iresult ['content_object'] == f"/api/v1/experiment/{self.experiment.id}/":
+                result = iresult
                 break
-            else:
-                result = None
 
         if result:
             self.id = result['id']
