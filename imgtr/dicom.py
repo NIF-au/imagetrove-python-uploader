@@ -258,7 +258,7 @@ def push_series(series_json_tuples, server, cfg, ssh):
             experiment.fetch(create=True, ssh=ssh)
             group = Group(server, experiment)
             group.fetch(create=True, ssh=ssh)
-            dataset = Dataset(server, series_json['dataset'], experiment, instrument, seriestime)
+            dataset = Dataset(server, series_json['dataset'], experiment, instrument, studytime)
             dataset.fetch(create=True, ssh=ssh)
             groupacl = ObjectACL(server, group, experiment)
             groupacl.fetch(create=True, ssh=ssh)
