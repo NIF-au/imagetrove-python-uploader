@@ -126,7 +126,9 @@ def scanner(infile, cfg, experiment, dataset):
 
         if not dataset:
             try:
+                studydatetime = datetime.datetime.strptime(f'{dcm.StudyDate}-{dcm.StudyTime}', "%Y%m%d-%H%M%S.%f").strftime("%Y%m%dT%H%M")
                 dataset = safe_name(getattr(dcm, cfg[instrument]['dataset-tag']))
+                dataset = f'{dataset}-{studydatetime}'
             except KeyError:
                 logging.error('dataset-tag entry missing in config')
                 raise
@@ -258,7 +260,7 @@ def push_series(series_json_tuples, server, cfg, ssh):
             experiment.fetch(create=True, ssh=ssh)
             group = Group(server, experiment)
             group.fetch(create=True, ssh=ssh)
-            dataset = Dataset(server, series_json['dataset'], experiment, instrument, studytime)
+            dataset = Dataset(server, series_json['dataset'], experiment, instrument, series_json['study'], studytime)
             dataset.fetch(create=True, ssh=ssh)
             groupacl = ObjectACL(server, group, experiment)
             groupacl.fetch(create=True, ssh=ssh)

@@ -141,23 +141,25 @@ class Experiment(TardisObject):
 
 
 class Dataset(TardisObject):
-    def __init__(self, server, name, experiment, instrument, acqtime):
+    def __init__(self, server, name, experiment, instrument, study, studytime):
         TardisObject.__init__(self, server, name)
         self.model_name = 'dataset'
         self.experiment = experiment
         self.instrument = instrument
         self.fullname = f'{self.name}-{self.experiment.name}'
-        self.acqtime = acqtime
+        self.study = study
+        self.studytime = studytime
         self.query = {
             'description': self.name,
             'experiments__id': self.experiment.id
         }
         self.new_json = {
             "description": self.name,
+            "directory": self.study,
             "experiments": [f"/api/v1/experiment/{self.experiment.id}/"],
             "immutable": False,
             "instrument": f"/api/v1/instrument/{self.instrument.id}/",
-            "created_time": self.acqtime
+            "created_time": self.studytime
         }
 
     @property
@@ -252,7 +254,7 @@ class Datafile(TardisObject):
         self.new_json = {
             "dataset": f"/api/v1/dataset/{self.dataset.id}/",
             "filename": self.name,
-            "directory": self.study,
+            # "directory": self.study,
             "md5sum": checksum('md5', self.file),
             "sha512sum": checksum('sha512', self.file),
             "size": str(self.file.stat().st_size),
