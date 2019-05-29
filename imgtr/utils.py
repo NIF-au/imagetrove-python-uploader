@@ -17,6 +17,7 @@ def zipdir(path_dir, zipfilepath=''):
     :param zipfilepath: output zip file
     :return: None
     """
+    logging.info(f'Zipping {os.path.basename(path_dir)}')
     shutil.make_archive(root_dir=str(path_dir),format='zip', base_name=str(path_dir))
     # if not zipfilepath:
     #     zipfilepath = os.path.join(os.path.dirname(path_dir), os.path.basename(path_dir)+'.zip')
