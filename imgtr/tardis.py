@@ -195,7 +195,8 @@ class ObjectACL(TardisObject):
         self.experiment = experiment
         self.query = {
             'pluginId': 'django_group',
-            'entityId': self.group.id
+            'entityId': self.group.id,
+            'limit': 1000
         }
         self.new_json = {
             "pluginId": "django_group",
@@ -216,9 +217,10 @@ class ObjectACL(TardisObject):
         results = self.server.get(f'/api/v1/{self.model_name}/?format=json&{query_string}', ssh)
         result = None
         for iresult in results:
-            if iresult ['content_object'] == f"/api/v1/experiment/{self.experiment.id}/":
+            if iresult['content_object'] == f"/api/v1/experiment/{self.experiment.id}/":
                 result = iresult
                 break
+        #TODO use offset to loop through GET results
 
         if result:
             self.id = result['id']
