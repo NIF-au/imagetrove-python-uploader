@@ -30,7 +30,9 @@ def run(job):
     dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset, cores=job.cores)
 
     # Making series output dir
+    logging.info('Making series output directories')
     series_json_tuples = make_series_dirs(dicom_json_tuples, outdir=job.tmpdir)
+
 
     # Sorting dicom
     logging.info('Sorting dicoms into series dirs ...')
@@ -58,14 +60,15 @@ def run(job):
 
 
 def dir_scan(indir, cfg, experiment, dataset, cores):
-    pools = mp.Pool(processes=cores)
-    infiles = indir.glob('**/*')
-    scan_generator = ((x, cfg, experiment, dataset) for x in infiles)
-    if cores > 1:
-        scan_results = pools.starmap(scanner, scan_generator)
-    else:
-        scan_results = [scanner(*x) for x in scan_generator]
-    return scan_results
+        pools = mp.Pool(processes=cores)
+        infiles = indir.glob('**/*')
+
+        scan_generator = ((x, cfg, experiment, dataset) for x in infiles)
+        if cores > 1:
+            scan_results = pools.starmap(scanner, scan_generator)
+        else:
+            scan_results = [scanner(*x) for x in scan_generator]
+        return scan_results
 
 
 def make_series_dirs(scan_results, outdir):
@@ -83,94 +86,93 @@ def make_series_dirs(scan_results, outdir):
 def scanner(infile, cfg, experiment, dataset):
     infile = str(infile)
     try:
-        dcm = pydicom.dcmread(infile, stop_before_pixels=True)
-
-        try:
-            station = safe_name('-'.join([dcm.Manufacturer, dcm.StationName]))
-        except AttributeError:
-            logging.error(f'Manufacturer or StationName not found in {infile}')
-            raise
-        if not station:
-            logging.error(f'Manufacturer and StationName is blank in {infile}')
-            raise ValueError
-
-        try:
-            instrument = safe_name(cfg['Instrument Mapping'][station])
-        except KeyError:
-            logging.error(f'{station} not found in config [Instrument Mapping]')
-            raise
-        if not instrument:
-            logging.error(f'Instrument name not found in config [Instrument Mapping]')
-            raise ValueError
-
-        if cfg.has_option(instrument, 'facility-name'):
-            facility = safe_name(cfg[instrument]['facility-name'])
-            if not facility:
-                logging.error(f'Facility name not found in config [{instrument}]')
-                raise ValueError
-        else:
-            facility = instrument
-
-        if not experiment:
+        with pydicom.dcmread(infile, stop_before_pixels=True) as dcm:
             try:
-                experiment = safe_name(getattr(dcm, cfg[instrument]['experiment-tag']))
-            except KeyError:
-                logging.error('experiment-tag entry missing in config')
-                raise
+                station = safe_name('-'.join([dcm.Manufacturer, dcm.StationName]))
             except AttributeError:
-                logging.error('{} not found in {}'.format(cfg[instrument]['experiment-tag'], infile))
+                logging.error(f'Manufacturer or StationName not found in {infile}')
                 raise
+            if not station:
+                logging.error(f'Manufacturer and StationName is blank in {infile}')
+                raise ValueError
+
+            try:
+                instrument = safe_name(cfg['Instrument Mapping'][station])
+            except KeyError:
+                logging.error(f'{station} not found in config [Instrument Mapping]')
+                raise
+            if not instrument:
+                logging.error(f'Instrument name not found in config [Instrument Mapping]')
+                raise ValueError
+
+            if cfg.has_option(instrument, 'facility-name'):
+                facility = safe_name(cfg[instrument]['facility-name'])
+                if not facility:
+                    logging.error(f'Facility name not found in config [{instrument}]')
+                    raise ValueError
+            else:
+                facility = instrument
+
             if not experiment:
-                logging.error(f'Experiment value is blank in  {infile}')
-                raise ValueError
+                try:
+                    experiment = safe_name(getattr(dcm, cfg[instrument]['experiment-tag']))
+                except KeyError:
+                    logging.error('experiment-tag entry missing in config')
+                    raise
+                except AttributeError:
+                    logging.error('{} not found in {}'.format(cfg[instrument]['experiment-tag'], infile))
+                    raise
+                if not experiment:
+                    logging.error(f'Experiment value is blank in  {infile}')
+                    raise ValueError
 
-        if not dataset:
-            try:
-                studydatetime = datetime.datetime.strptime(f'{dcm.StudyDate}-{dcm.StudyTime}', "%Y%m%d-%H%M%S.%f").strftime("%Y%m%dT%H%M")
-                dataset = safe_name(getattr(dcm, cfg[instrument]['dataset-tag']))
-                dataset = f'{dataset}-{studydatetime}'
-            except KeyError:
-                logging.error('dataset-tag entry missing in config')
-                raise
-            except AttributeError:
-                logging.error('{} not found in {}'.format(cfg[instrument]['dataset-tag'], infile))
-                raise
             if not dataset:
-                logging.error(f'Dataset value is blank in {infile}')
-                raise ValueError
+                try:
+                    studydatetime = datetime.datetime.strptime(f'{dcm.StudyDate}-{dcm.StudyTime}', "%Y%m%d-%H%M%S.%f").strftime("%Y%m%dT%H%M")
+                    dataset = safe_name(getattr(dcm, cfg[instrument]['dataset-tag']))
+                    dataset = f'{dataset}-{studydatetime}'
+                except KeyError:
+                    logging.error('dataset-tag entry missing in config')
+                    raise
+                except AttributeError:
+                    logging.error('{} not found in {}'.format(cfg[instrument]['dataset-tag'], infile))
+                    raise
+                if not dataset:
+                    logging.error(f'Dataset value is blank in {infile}')
+                    raise ValueError
 
-        try:
-            study = safe_name(dcm.StudyDescription)
-        except AttributeError:
-            study = ''
+            try:
+                study = safe_name(dcm.StudyDescription)
+            except AttributeError:
+                study = ''
 
-        try:
-            if not dcm.SeriesNumber:
-                logging.error(f'SeriesNumber is blank in {infile}')
-                raise ValueError
-        except AttributeError:
-            logging.error(f'SeriesNumber missing in {infile}')
-            raise Exception
+            try:
+                if not dcm.SeriesNumber:
+                    logging.error(f'SeriesNumber is blank in {infile}')
+                    raise ValueError
+            except AttributeError:
+                logging.error(f'SeriesNumber missing in {infile}')
+                raise Exception
 
-        try:
-            if not dcm.SeriesDescription:
-                logging.error(f'SeriesDescription is blank in {infile}')
-                raise ValueError
-        except AttributeError:
-            logging.error(f'SeriesDescription missing in {infile}')
-            raise Exception
+            try:
+                if not dcm.SeriesDescription:
+                    logging.error(f'SeriesDescription is blank in {infile}')
+                    raise ValueError
+            except AttributeError:
+                logging.error(f'SeriesDescription missing in {infile}')
+                raise Exception
 
-        series = safe_name(f'{dcm.SeriesNumber:04}_{dcm.SeriesDescription}').lower()
+            series = safe_name(f'{dcm.SeriesNumber:04}_{dcm.SeriesDescription}').lower()
 
-        series_json = {
-            'instrument': instrument,
-            'facility': facility,
-            'experiment': experiment,
-            'dataset': dataset,
-            'study': study,
-            'series': series
-        }
-        return infile, json.dumps(series_json)
+            series_json = {
+                'instrument': instrument,
+                'facility': facility,
+                'experiment': experiment,
+                'dataset': dataset,
+                'study': study,
+                'series': series
+            }
+            return infile, json.dumps(series_json)
     except pydicom.errors.InvalidDicomError:
         logging.error(f'Invalid dicom file. Skipping ... {infile}')
 
@@ -202,23 +204,23 @@ def sorter(infile, series_json_string, outdir):
             0x00100020
             # 0x00081030
         ]
-    dcm = pydicom.dcmread(str(infile), stop_before_pixels=False)
-    # ISO 9660 compliance dicom filename
-    outfilename = safe_name(f'{dcm.InstanceNumber:08}.dcm').lower()
-    outfile = (outdir/outfilename).resolve()
-    # De-identifying
-    for tag in ERASE_TAG_LIST:
-        if tag in dcm:
-            dcm[tag].value = ''
-    # Override StudyName with experiment
-    dcm[0x00080090].value = series_json['experiment']  # Referring Physician Name
-    # dcm[0x00200010].value = series_json['experiment']  # Study ID
-    # dcm[0x00081030].value = series_json['experiment']  # Study Description
-    # Override PatientName with dataset
-    dcm[0x00100010].value = series_json['dataset']  # Patient Name
-    dcm[0x00100020].value = series_json['dataset']  # Patient ID
-    # Saving output dicom file
-    dcm.save_as(str(outfile))
+    with pydicom.dcmread(str(infile), stop_before_pixels=False) as dcm:
+        # ISO 9660 compliance dicom filename
+        outfilename = safe_name(f'{dcm.InstanceNumber:08}.dcm').lower()
+        outfile = (outdir/outfilename).resolve()
+        # De-identifying
+        for tag in ERASE_TAG_LIST:
+            if tag in dcm:
+                dcm[tag].value = ''
+        # Override StudyName with experiment
+        dcm[0x00080090].value = series_json['experiment']  # Referring Physician Name
+        # dcm[0x00200010].value = series_json['experiment']  # Study ID
+        # dcm[0x00081030].value = series_json['experiment']  # Study Description
+        # Override PatientName with dataset
+        dcm[0x00100010].value = series_json['dataset']  # Patient Name
+        dcm[0x00100020].value = series_json['dataset']  # Patient ID
+        # Saving output dicom file
+        dcm.save_as(str(outfile))
 
 
 def push_series(series_json_tuples, server, cfg, ssh):
@@ -230,11 +232,11 @@ def push_series(series_json_tuples, server, cfg, ssh):
         series_json = json.loads(series_json_string)
         dicom = next((pathlib.Path(seriesdir)).glob('*.dcm'))
         try:
-            dcm = pydicom.dcmread(str(dicom), stop_before_pixels=True)
-            timestring = f'{dcm.SeriesDate} {dcm.SeriesTime}'
-            seriestime = datetime.datetime.strptime(timestring, "%Y%m%d %H%M%S.%f").replace(microsecond=0).isoformat()
-            timestring = f'{dcm.StudyDate} {dcm.StudyTime}'
-            studytime = datetime.datetime.strptime(timestring, "%Y%m%d %H%M%S.%f").replace(microsecond=0).isoformat()
+            with pydicom.dcmread(str(dicom), stop_before_pixels=True) as dcm:
+                timestring = f'{dcm.SeriesDate} {dcm.SeriesTime}'
+                seriestime = datetime.datetime.strptime(timestring, "%Y%m%d %H%M%S.%f").replace(microsecond=0).isoformat()
+                timestring = f'{dcm.StudyDate} {dcm.StudyTime}'
+                studytime = datetime.datetime.strptime(timestring, "%Y%m%d %H%M%S.%f").replace(microsecond=0).isoformat()
         except Exception:
             seriestime = datetime.datetime.fromtimestamp(int(dicom.stat().st_ctime)).replace(microsecond=0).isoformat()
             studytime = datetime.datetime.fromtimestamp(int(dicom.stat().st_ctime)).replace(microsecond=0).isoformat()
@@ -243,7 +245,7 @@ def push_series(series_json_tuples, server, cfg, ssh):
             old_series_json['facility'] == series_json['facility'] and \
                 old_series_json['experiment'] == series_json['experiment'] and \
                 old_series_json['dataset'] == series_json['dataset']:
-            ''' Current series shares dataset with previous series 
+            ''' Current series shares dataset with previous series
             Skipping MyTardis HTTP requests for dataset and above
             '''
             pass
