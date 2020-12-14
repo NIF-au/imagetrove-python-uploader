@@ -42,4 +42,4 @@ Use the following syntax:
 | `--cores`     | No. of cores for multiprocessing | All system cores |
 | `--experiment`| Manual Experiment name override  | From metadata, see experiment-tag in config |
 | `--dataset`   | Manual Dataset name override     | From metadata, see dataset-tag in config |
-
+| `--instrument`| Manual Instrument name override  | See InstrumentMapping in config |

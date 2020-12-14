@@ -22,6 +22,7 @@ def get_args(args=sys.argv[1:]):
     parser.add_argument('--cores', help='number of cpu cores')
     parser.add_argument('--experiment', help='experiment name override')
     parser.add_argument('--dataset', help='dataset name override')
+    parser.add_argument('--instrument', help='instrument name override')
     args = parser.parse_args(args)
     return args
 

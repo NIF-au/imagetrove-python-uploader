@@ -27,7 +27,7 @@ def run(job):
     logging.info('Scanning all dicoms for all series')
     pools = mp.Pool(processes=job.cores)
     # Compiling list of dicoms and json metadata
-    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset, cores=job.cores)
+    dicom_json_tuples = dir_scan(indir=job.indir, cfg=job.cfg, experiment=job.experiment, dataset=job.dataset, instrument=job.instrument, cores=job.cores)
 
     # Making series output dir
     logging.info('Making series output directories')
@@ -59,11 +59,11 @@ def run(job):
     job.staging.close()
 
 
-def dir_scan(indir, cfg, experiment, dataset, cores):
+def dir_scan(indir, cfg, experiment, dataset, instrument, cores):
         pools = mp.Pool(processes=cores)
         infiles = indir.glob('**/*')
 
-        scan_generator = ((x, cfg, experiment, dataset) for x in infiles)
+        scan_generator = ((x, cfg, experiment, dataset, instrument) for x in infiles)
         if cores > 1:
             scan_results = pools.starmap(scanner, scan_generator)
         else:
@@ -83,27 +83,28 @@ def make_series_dirs(scan_results, outdir):
     return series_json_tuples
 
 
-def scanner(infile, cfg, experiment, dataset):
+def scanner(infile, cfg, experiment, dataset, instrument):
     infile = str(infile)
     try:
         with pydicom.dcmread(infile, stop_before_pixels=True) as dcm:
-            try:
-                station = safe_name('-'.join([dcm.Manufacturer, dcm.StationName]))
-            except AttributeError:
-                logging.error(f'Manufacturer or StationName not found in {infile}')
-                raise
-            if not station:
-                logging.error(f'Manufacturer and StationName is blank in {infile}')
-                raise ValueError
-
-            try:
-                instrument = safe_name(cfg['Instrument Mapping'][station])
-            except KeyError:
-                logging.error(f'{station} not found in config [Instrument Mapping]')
-                raise
             if not instrument:
-                logging.error(f'Instrument name not found in config [Instrument Mapping]')
-                raise ValueError
+                try:
+                    station = safe_name('-'.join([dcm.Manufacturer, dcm.StationName]))
+                except AttributeError:
+                    logging.error(f'Manufacturer or StationName not found in {infile}')
+                    raise
+                if not station:
+                    logging.error(f'Manufacturer and StationName is blank in {infile}')
+                    raise ValueError
+
+                try:
+                    instrument = safe_name(cfg['Instrument Mapping'][station])
+                except KeyError:
+                    logging.error(f'{station} not found in config [Instrument Mapping]')
+                    raise
+                if not instrument:
+                    logging.error(f'Instrument name not found in config [Instrument Mapping]')
+                    raise ValueError
 
             if cfg.has_option(instrument, 'facility-name'):
                 facility = safe_name(cfg[instrument]['facility-name'])

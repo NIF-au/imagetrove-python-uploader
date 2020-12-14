@@ -104,6 +104,8 @@ class Job:
             self.experiment = args.experiment
         if args.dataset:
             self.dataset = args.dataset
+        if args.instrument:
+            self.instrument = args.instrument
 
     def parse_config(self):
         """parse config file to dictionary using ConfigParser module"""
