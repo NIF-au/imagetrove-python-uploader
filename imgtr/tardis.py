@@ -176,7 +176,7 @@ class StorageBox(TardisObject):
     def fetch(self, create=False, ssh=None):
         if create:
             logging.warning('Storagebox creation not authorized')
-        results = self.server.get(f'/api/v1/{self.model_name}/?format=json', ssh)
+        results = self.server.get(f'/api/v1/{self.model_name}/?format=json&limit=1000', ssh)
         if results:
             for result in results:
                 if result['name'] == self.name:
