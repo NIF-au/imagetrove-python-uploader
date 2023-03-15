@@ -13,6 +13,13 @@ cores = 8
 [Instrument Mapping]
 SIEMENS-TrioTim = 3T Magnetom Prisma
 SIEMENS-mrcTrio = 3T Magnetom Prisma
+NO-INSTRUMENT = NO-INSTRUMENT
+
+[NO-INSTRUMENT]
+experiment-tag = ReferringPhysicianName
+dataset-tag = PatientID
+facility-name = NO-INSTRUMENT
+storagebox = default
 
 [3T Magnetom Prisma]
 experiment-tag = ReferringPhysicianName
