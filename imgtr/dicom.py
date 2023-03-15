@@ -92,10 +92,12 @@ def scanner(infile, cfg, experiment, dataset, instrument):
                     station = safe_name('-'.join([dcm.Manufacturer, dcm.StationName]))
                 except AttributeError:
                     logging.error(f'Manufacturer or StationName not found in {infile}')
-                    raise
+                    station = "NO-INSTRUMENT"
+                    # raise
                 if not station:
                     logging.error(f'Manufacturer and StationName is blank in {infile}')
-                    raise ValueError
+                    station = "NO-INSTRUMENT"
+                    # raise ValueError
 
                 try:
                     instrument = safe_name(cfg['Instrument Mapping'][station])
